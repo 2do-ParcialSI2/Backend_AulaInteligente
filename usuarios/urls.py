@@ -6,7 +6,8 @@ from .views import (
     PermisoListCreateView, PermisoDetailView,
     EstudianteListCreateView, EstudianteDetailView,
     DocenteListCreateView, DocenteDetailView,
-    PadreTutorListCreateView, PadreTutorDetailView
+    PadreTutorListCreateView, PadreTutorDetailView,
+    CrearAdminView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -26,4 +27,5 @@ urlpatterns = [
     path('docentes/<int:pk>/', DocenteDetailView.as_view(), name='docente-detail'),
     path('padres-tutores/', PadreTutorListCreateView.as_view(), name='padretutor-list-create'),
     path('padres-tutores/<int:pk>/', PadreTutorDetailView.as_view(), name='padretutor-detail'),
+    path('crear-admin/', CrearAdminView.as_view(), name='crear-admin'),
 ] 

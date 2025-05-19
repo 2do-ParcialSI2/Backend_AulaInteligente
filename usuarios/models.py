@@ -17,15 +17,20 @@ class Rol(models.Model):
 
 class Usuario(AbstractUser):
     correo = models.EmailField(unique=True)
-    genero = models.BooleanField(null=True, blank=True)
+    name = models.CharField(max_length=150)
+    GENERO_CHOICES = [
+        ('M', 'Masculino'),
+        ('F', 'Femenino'),
+    ]
+    genero = models.CharField(max_length=1, choices=GENERO_CHOICES, null=True, blank=True)
     activo = models.BooleanField(default=True)
     roles = models.ManyToManyField(Rol, blank=True)
 
     USERNAME_FIELD = 'correo'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = ['name']
 
     def __str__(self):
-        return self.correo
+        return self.name
 
 class Estudiante(models.Model):
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='estudiante')

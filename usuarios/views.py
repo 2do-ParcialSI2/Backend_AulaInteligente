@@ -5,7 +5,9 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Usuario, Estudiante, Docente, PadreTutor, Rol, Permiso
-from .serializers import UsuarioSerializer, CustomTokenObtainPairSerializer, RolSerializer, PermisoSerializer, EstudianteSerializer, DocenteSerializer, PadreTutorSerializer
+from .serializers import UsuarioSerializer, CustomTokenObtainPairSerializer, RolSerializer, PermisoSerializer, EstudianteSerializer, DocenteSerializer, PadreTutorSerializer, CrearAdminSerializer
+from rest_framework import serializers
+from drf_yasg.utils import swagger_auto_schema
 
 # Create your views here.
 
@@ -87,3 +89,25 @@ class PadreTutorDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = PadreTutor.objects.all()
     serializer_class = PadreTutorSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+class CrearAdminView(APIView):
+    permission_classes = []  # Sin autenticación
+    serializer_class = CrearAdminSerializer
+
+    @swagger_auto_schema(request_body=CrearAdminSerializer)
+    def post(self, request):
+        admin_role, created = Rol.objects.get_or_create(nombre='ADMINISTRADOR')
+        if Usuario.objects.filter(roles=admin_role).exists():
+            return Response({'error': 'Ya existe un usuario administrador.'}, status=400)
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        user = Usuario(
+            correo=data['correo'],
+            name=data['name'],
+            activo=True
+        )
+        user.set_password(data['password'])
+        user.save()
+        user.roles.add(admin_role)
+        return Response({'mensaje': 'Usuario administrador creado correctamente.'}, status=201)

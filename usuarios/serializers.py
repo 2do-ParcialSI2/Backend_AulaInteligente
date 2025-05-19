@@ -3,9 +3,10 @@ from .models import Usuario, Estudiante, Docente, PadreTutor, Rol, Permiso
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class UsuarioSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(required=True)
     class Meta:
         model = Usuario
-        fields = ['id', 'correo', 'username', 'genero', 'activo', 'roles', 'password']
+        fields = ['id', 'correo', 'name', 'genero', 'activo', 'roles', 'password']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -39,6 +40,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['roles'] = [rol.nombre for rol in user.roles.all()]
         return token
 
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        # Solo devolver el access token y los datos del usuario
+        user_data = UsuarioSerializer(self.user).data
+        data = {
+            'token': data['access'],
+            'user': user_data
+        }
+        return data
+
 class PermisoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permiso
@@ -48,4 +59,9 @@ class RolSerializer(serializers.ModelSerializer):
     permisos = PermisoSerializer(many=True, read_only=True)
     class Meta:
         model = Rol
-        fields = ['id', 'nombre', 'permisos'] 
+        fields = ['id', 'nombre', 'permisos']
+
+class CrearAdminSerializer(serializers.Serializer):
+    correo = serializers.EmailField()
+    name = serializers.CharField()
+    password = serializers.CharField(write_only=True) 
