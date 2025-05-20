@@ -16,21 +16,21 @@ class Rol(models.Model):
         return self.nombre
 
 class Usuario(AbstractUser):
-    correo = models.EmailField(unique=True)
-    name = models.CharField(max_length=150)
     GENERO_CHOICES = [
         ('M', 'Masculino'),
         ('F', 'Femenino'),
     ]
+    username = None  # Deshabilitamos el campo username
+    email = models.EmailField(unique=True)  # Usamos el campo email existente
     genero = models.CharField(max_length=1, choices=GENERO_CHOICES, null=True, blank=True)
     activo = models.BooleanField(default=True)
     roles = models.ManyToManyField(Rol, blank=True)
 
-    USERNAME_FIELD = 'correo'
-    REQUIRED_FIELDS = ['name']
+    USERNAME_FIELD = 'email'  # Usamos email como campo principal
+    REQUIRED_FIELDS = []  # No necesitamos campos adicionales requeridos
 
     def __str__(self):
-        return self.name
+        return self.email
 
 class Estudiante(models.Model):
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='estudiante')

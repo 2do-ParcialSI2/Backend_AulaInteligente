@@ -60,35 +60,53 @@ class PermisoDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = PermisoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class EstudianteListCreateView(generics.ListCreateAPIView):
-    queryset = Estudiante.objects.all()
-    serializer_class = EstudianteSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-class EstudianteDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Estudiante.objects.all()
-    serializer_class = EstudianteSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
 class DocenteListCreateView(generics.ListCreateAPIView):
-    queryset = Docente.objects.all()
     serializer_class = DocenteSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        rol_docente = Rol.objects.get(nombre='DOCENTE')
+        return Usuario.objects.filter(roles=rol_docente, activo=True)
 
 class DocenteDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Docente.objects.all()
     serializer_class = DocenteSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_object(self):
+        rol_docente = Rol.objects.get(nombre='DOCENTE')
+        return Usuario.objects.get(pk=self.kwargs['pk'], roles=rol_docente, activo=True)
+
+class EstudianteListCreateView(generics.ListCreateAPIView):
+    serializer_class = EstudianteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        rol_estudiante = Rol.objects.get(nombre='ESTUDIANTE')
+        return Usuario.objects.filter(roles=rol_estudiante, activo=True)
+
+class EstudianteDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = EstudianteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        rol_estudiante = Rol.objects.get(nombre='ESTUDIANTE')
+        return Usuario.objects.get(pk=self.kwargs['pk'], roles=rol_estudiante, activo=True)
+
 class PadreTutorListCreateView(generics.ListCreateAPIView):
-    queryset = PadreTutor.objects.all()
     serializer_class = PadreTutorSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        rol_padre = Rol.objects.get(nombre='PADRE_TUTOR')
+        return Usuario.objects.filter(roles=rol_padre, activo=True)
+
 class PadreTutorDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = PadreTutor.objects.all()
     serializer_class = PadreTutorSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        rol_padre = Rol.objects.get(nombre='PADRE_TUTOR')
+        return Usuario.objects.get(pk=self.kwargs['pk'], roles=rol_padre, activo=True)
 
 class CrearAdminView(APIView):
     permission_classes = []  # Sin autenticación
@@ -103,8 +121,9 @@ class CrearAdminView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         user = Usuario(
-            correo=data['correo'],
-            name=data['name'],
+            email=data['email'],
+            first_name='Admin',
+            last_name='Sistema',
             activo=True
         )
         user.set_password(data['password'])
