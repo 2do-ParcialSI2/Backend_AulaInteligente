@@ -125,4 +125,76 @@ Edita el archivo `.env` y cambia los valores de:
 
 ---
 
-¿Dudas o sugerencias? ¡Revisa el código o contacta al desarrollador! 
+¿Dudas o sugerencias? ¡Revisa el código o contacta al desarrollador!
+
+## Estructura de modelos y relaciones
+
+- **Usuario**: Modelo principal, contiene los datos generales y los roles.
+- **Docente, Estudiante, PadreTutor**: Modelos relacionados con Usuario mediante un campo OneToOne. Cada uno tiene atributos propios.
+    - Ejemplo: Docente tiene `especialidad`, Estudiante tiene `direccion`, `fecha_nacimiento`, y un campo `padre_tutor` que es ForeignKey a PadreTutor.
+
+### Relaciones
+- Un **Usuario** puede tener un perfil de Docente, Estudiante o PadreTutor (o ninguno).
+- Un **PadreTutor** puede estar relacionado con varios Estudiantes (relación uno a muchos).
+- Para asignar un padre a un estudiante, se usa el campo `padre_tutor_id` con el ID del modelo PadreTutor.
+
+---
+
+## Endpoints principales
+
+### Usuarios generales
+- **POST /api/usuarios/**: Crea un usuario general (no asigna datos propios de docente, estudiante o padre/tutor).
+- **GET /api/usuarios/**: Lista todos los usuarios generales.
+
+### Docentes
+- **POST /api/docentes/**: Crea un usuario y un perfil de docente (requiere datos de usuario y `especialidad`).
+- **GET /api/docentes/**: Lista todos los docentes con todos los datos del usuario y del docente.
+
+### Estudiantes
+- **POST /api/estudiantes/**: Crea un usuario y un perfil de estudiante (requiere datos de usuario, `direccion`, `fecha_nacimiento` y opcionalmente `padre_tutor_id`).
+- **GET /api/estudiantes/**: Lista todos los estudiantes con todos los datos del usuario y del estudiante, incluyendo información del padre/tutor si está asignado.
+
+### Padres/Tutores
+- **POST /api/padres-tutores/**: Crea un usuario y un perfil de padre/tutor (requiere datos de usuario, `parentesco`, `telefono`).
+- **GET /api/padres-tutores/**: Lista todos los padres/tutores con todos los datos del usuario y del padre/tutor.
+
+---
+
+## Ejemplo de relación estudiante-padre
+
+Para asignar un padre/tutor a un estudiante, usa el campo `padre_tutor_id` con el ID del modelo PadreTutor:
+
+```json
+{
+    "email": "estudiante@example.com",
+    "first_name": "Ana",
+    "last_name": "López",
+    "genero": "F",
+    "activo": true,
+    "password": "123456",
+    "direccion": "Calle 123",
+    "fecha_nacimiento": "2005-05-10",
+    "padre_tutor_id": 5
+}
+```
+
+Donde `5` es el ID del padre/tutor (no el ID del usuario).
+
+---
+
+## Resumen de endpoints
+
+| Endpoint                        | Descripción                                      |
+|---------------------------------|--------------------------------------------------|
+| POST /api/usuarios/             | Crear usuario general                            |
+| POST /api/docentes/             | Crear usuario + perfil docente                   |
+| POST /api/estudiantes/          | Crear usuario + perfil estudiante                |
+| POST /api/padres-tutores/       | Crear usuario + perfil padre/tutor               |
+| GET /api/docentes/              | Listar docentes (datos completos)                |
+| GET /api/estudiantes/           | Listar estudiantes (datos completos)             |
+| GET /api/padres-tutores/        | Listar padres/tutores (datos completos)          |
+
+---
+
+Para más detalles, revisa la documentación Swagger en:
+- [http://localhost:8000/swagger/](http://localhost:8000/swagger/) 

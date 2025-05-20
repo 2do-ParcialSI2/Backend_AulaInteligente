@@ -33,15 +33,22 @@ class Usuario(AbstractUser):
         return self.email
 
 class Estudiante(models.Model):
-    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='estudiante')
-    direccion = models.CharField(max_length=255, blank=True)
-    fecha_nacimiento = models.DateField(null=True, blank=True)
+    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE)
+    direccion = models.CharField(max_length=255)
+    fecha_nacimiento = models.DateField()
+    padre_tutor = models.ForeignKey('PadreTutor', on_delete=models.SET_NULL, null=True, related_name='estudiantes')
+
+    def __str__(self):
+        return f"{self.usuario.first_name} {self.usuario.last_name}"
 
 class Docente(models.Model):
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='docente')
     especialidad = models.CharField(max_length=100, blank=True)
 
 class PadreTutor(models.Model):
-    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='padretutor')
-    parentesco = models.CharField(max_length=100, blank=True)
-    telefono = models.CharField(max_length=20, blank=True)
+    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE)
+    parentesco = models.CharField(max_length=50)
+    telefono = models.CharField(max_length=20)
+
+    def __str__(self):
+        return f"{self.usuario.first_name} {self.usuario.last_name}"

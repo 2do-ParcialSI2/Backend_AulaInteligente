@@ -65,48 +65,36 @@ class DocenteListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        rol_docente = Rol.objects.get(nombre='DOCENTE')
-        return Usuario.objects.filter(roles=rol_docente, activo=True)
+        return Docente.objects.all()
 
 class DocenteDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = DocenteSerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self):
-        rol_docente = Rol.objects.get(nombre='DOCENTE')
-        return Usuario.objects.get(pk=self.kwargs['pk'], roles=rol_docente, activo=True)
+    queryset = Docente.objects.all()
 
 class EstudianteListCreateView(generics.ListCreateAPIView):
     serializer_class = EstudianteSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        rol_estudiante = Rol.objects.get(nombre='ESTUDIANTE')
-        return Usuario.objects.filter(roles=rol_estudiante, activo=True)
+        return Estudiante.objects.all()
 
 class EstudianteDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = EstudianteSerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self):
-        rol_estudiante = Rol.objects.get(nombre='ESTUDIANTE')
-        return Usuario.objects.get(pk=self.kwargs['pk'], roles=rol_estudiante, activo=True)
+    queryset = Estudiante.objects.all()
 
 class PadreTutorListCreateView(generics.ListCreateAPIView):
     serializer_class = PadreTutorSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        rol_padre = Rol.objects.get(nombre='PADRE_TUTOR')
-        return Usuario.objects.filter(roles=rol_padre, activo=True)
+        return PadreTutor.objects.all()
 
 class PadreTutorDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = PadreTutorSerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self):
-        rol_padre = Rol.objects.get(nombre='PADRE_TUTOR')
-        return Usuario.objects.get(pk=self.kwargs['pk'], roles=rol_padre, activo=True)
+    queryset = PadreTutor.objects.all()
 
 class CrearAdminView(APIView):
     permission_classes = []  # Sin autenticación
