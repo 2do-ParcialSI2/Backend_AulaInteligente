@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     "cursos",
     "materias",
     "horarios",
+    "seguimiento",
+    "matricula",
 ]
 
 MIDDLEWARE = [
