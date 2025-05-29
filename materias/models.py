@@ -1,0 +1,26 @@
+from django.db import models
+from usuarios.models import Docente
+
+
+class Materia(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.nombre
+
+
+class MateriaCurso(models.Model):
+    curso = models.ForeignKey("cursos.Curso", on_delete=models.CASCADE)
+    materia = models.ForeignKey("materias.Materia", on_delete=models.CASCADE)
+    docente = models.ForeignKey(
+        Docente, on_delete=models.CASCADE, related_name="materias_asignadas"
+    )
+
+    class Meta:
+        unique_together = ("curso", "materia")  # evita duplicados
+        verbose_name = "Materia por curso"
+        verbose_name_plural = "Materias por curso"
+
+    def __str__(self):
+        return f"{self.materia.nombre} en {self.curso.nombre}"
