@@ -16,6 +16,12 @@ class MateriaCurso(models.Model):
     docente = models.ForeignKey(
         Docente, on_delete=models.CASCADE, related_name="materias_asignadas"
     )
+    horarios = models.ManyToManyField(
+        "horarios.Horario", 
+        blank=True, 
+        related_name="materia_cursos",
+        help_text="Horarios asignados a esta materia en este curso"
+    )
 
     class Meta:
         unique_together = ("curso", "materia")  # evita duplicados

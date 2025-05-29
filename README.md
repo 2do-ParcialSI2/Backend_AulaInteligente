@@ -140,6 +140,347 @@ Edita el archivo `.env` y cambia los valores de:
 
 ---
 
+## 🎓 Flujo de Creación de Cursos y Materias
+
+### Estructura de Relaciones Académicas
+
+El sistema maneja una relación **muchos a muchos** entre Cursos y Materias a través de una tabla intermedia llamada `MateriaCurso`, que incluye información del docente asignado:
+
+- **Curso**: Contiene información básica del curso (nombre, turno)
+- **Materia**: Contiene información de la materia (nombre, descripción)
+- **MateriaCurso**: Tabla intermedia que relaciona curso + materia + docente
+- **Horario**: Se relaciona con MateriaCurso para definir horarios específicos
+
+### Flujo Completo de Creación (en orden)
+
+#### **Paso 1: Crear Materias**
+```http
+POST /api/materias/
+Content-Type: application/json
+
+{
+  "nombre": "Matemáticas",
+  "descripcion": "Curso básico de matemáticas para secundaria"
+}
+```
+
+```http
+POST /api/materias/
+Content-Type: application/json
+
+{
+  "nombre": "Historia",
+  "descripcion": "Historia universal y nacional"
+}
+```
+
+#### **Paso 2: Crear Docentes (si no existen)**
+```http
+POST /api/docentes/
+Content-Type: application/json
+
+{
+  "email": "profesor.matematicas@colegio.com",
+  "first_name": "Juan",
+  "last_name": "Pérez",
+  "genero": "M",
+  "password": "password123",
+  "especialidad": "Matemáticas"
+}
+```
+
+#### **Paso 3: Crear Cursos**
+```http
+POST /api/cursos/
+Content-Type: application/json
+
+{
+  "nombre": "5to A",
+  "turno": "mañana"
+}
+```
+
+```http
+POST /api/cursos/
+Content-Type: application/json
+
+{
+  "nombre": "3ro B",
+  "turno": "tarde"
+}
+```
+
+#### **Paso 4: Asignar Materias con Docentes y Horarios a Cursos**
+```http
+PATCH /api/cursos/asignar-materias/{curso_id}/
+Content-Type: application/json
+
+{
+  "asignaciones": [
+    {
+      "materia_id": 1,
+      "docente_id": 2,
+      "horarios": [
+        {
+          "dia_semana": "Lunes",
+          "hora_inicio": "08:00",
+          "hora_fin": "09:30"
+        },
+        {
+          "dia_semana": "Miércoles",
+          "hora_inicio": "10:00",
+          "hora_fin": "11:30"
+        }
+      ]
+    },
+    {
+      "materia_id": 3,
+      "docente_id": 4,
+      "horarios": [
+        {
+          "dia_semana": "Martes",
+          "hora_inicio": "14:00",
+          "hora_fin": "15:30"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### **Paso 5: Ver Asignaciones de un Curso**
+```http
+GET /api/cursos/asignar-materias/{curso_id}/
+```
+
+**Respuesta:**
+```json
+{
+  "id": 1,
+  "nombre": "5to A",
+  "turno": "mañana",
+  "materias_docentes": [
+    {
+      "id": 1,
+      "materia_id": 1,
+      "materia_nombre": "Matemáticas",
+      "docente_id": 2,
+      "docente_nombre": "Juan Pérez",
+      "horarios": [
+        {
+          "id": 1,
+          "dia_semana": "Lunes",
+          "hora_inicio": "08:00:00",
+          "hora_fin": "09:30:00"
+        },
+        {
+          "id": 2,
+          "dia_semana": "Miércoles",
+          "hora_inicio": "10:00:00",
+          "hora_fin": "11:30:00"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "materia_id": 3,
+      "materia_nombre": "Historia",
+      "docente_id": 4,
+      "docente_nombre": "María González",
+      "horarios": [
+        {
+          "id": 3,
+          "dia_semana": "Martes",
+          "hora_inicio": "14:00:00",
+          "hora_fin": "15:30:00"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### **Paso 6: Agregar Más Horarios (Opcional)**
+Si solo quieres agregar horarios sin cambiar las asignaciones, puedes usar:
+```http
+POST /api/horarios/
+Content-Type: application/json
+
+{
+  "materia_curso": 1,
+  "dia_semana": "Viernes",
+  "hora_inicio": "08:00",
+  "hora_fin": "09:30"
+}
+```
+
+### Endpoints Disponibles para Cursos y Materias
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/cursos/` | Listar todos los cursos |
+| POST | `/api/cursos/` | Crear un nuevo curso |
+| GET | `/api/cursos/{id}/` | Obtener curso específico |
+| PUT/PATCH | `/api/cursos/{id}/` | Actualizar curso |
+| DELETE | `/api/cursos/{id}/` | Eliminar curso |
+| GET | `/api/cursos/turnos/` | Obtener opciones de turnos |
+| GET | `/api/cursos/con-materias/{id}` | Ver curso con sus materias |
+| GET | `/api/cursos/asignar-materias/{id}/` | Ver asignaciones de materias-docentes |
+| PATCH | `/api/cursos/asignar-materias/{id}/` | Asignar/actualizar materias con docentes |
+| GET | `/api/materias/` | Listar todas las materias |
+| POST | `/api/materias/` | Crear una nueva materia |
+| GET | `/api/horarios/` | Listar todos los horarios |
+| POST | `/api/horarios/` | Crear un nuevo horario |
+
+### Validaciones Importantes
+
+- **Relación única curso-turno**: Un curso con el mismo nombre puede existir en diferentes turnos (ej: "1ro A" mañana y "1ro A" tarde)
+- **Relación única materia-curso**: Un curso no puede tener la misma materia asignada dos veces
+- **Docente requerido**: Toda asignación materia-curso debe tener un docente
+- **Turnos válidos**: Solo se permiten los turnos: "mañana", "tarde", "noche"
+- **Validación integrada de horarios**: Al asignar materias con horarios, el sistema valida automáticamente:
+  - No hay choques entre horarios nuevos y existentes
+  - No hay solapamiento dentro de la misma asignación
+  - Los horarios tienen hora_inicio < hora_fin
+- **Actualizaciones inteligentes**: El sistema preserva asignaciones y horarios existentes que no cambien
+- **Transaccionalidad**: Todo se ejecuta en una transacción atómica (todo o nada)
+
+### Validaciones de Horarios
+
+El sistema incluye validaciones automáticas integradas para evitar conflictos:
+
+#### **Ejemplo de asignación con validación automática:**
+```http
+PATCH /api/cursos/asignar-materias/1/
+Content-Type: application/json
+
+{
+  "asignaciones": [
+    {
+      "materia_id": 1,
+      "docente_id": 2,
+      "horarios": [
+        {
+          "dia_semana": "Lunes",
+          "hora_inicio": "08:00",
+          "hora_fin": "09:30"
+        },
+        {
+          "dia_semana": "Lunes",
+          "hora_inicio": "09:00",
+          "hora_fin": "10:30"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Error esperado (solapamiento):**
+```json
+{
+  "asignaciones": [
+    {
+      "horarios": [
+        "Horarios solapados para Lunes: 08:00:00-09:30:00 y 09:00:00-10:30:00"
+      ]
+    }
+  ]
+}
+```
+
+#### **Ejemplo de choque con horarios existentes:**
+Si ya existe Matemáticas de 08:00-09:30 los Lunes:
+```http
+PATCH /api/cursos/asignar-materias/1/
+Content-Type: application/json
+
+{
+  "asignaciones": [
+    {
+      "materia_id": 2,
+      "docente_id": 3,
+      "horarios": [
+        {
+          "dia_semana": "Lunes",
+          "hora_inicio": "08:30",
+          "hora_fin": "10:00"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Error esperado:**
+```json
+{
+  "non_field_errors": [
+    "Choque de horarios detectado en Lunes: 'Matemáticas' (08:00:00-09:30:00) vs 'Historia' (08:30:00-10:00:00)"
+  ]
+}
+```
+
+#### **Ejemplos de cursos válidos en diferentes turnos:**
+```json
+// ✅ Permitido
+{"nombre": "1ro A", "turno": "mañana"}
+{"nombre": "1ro A", "turno": "tarde"}
+{"nombre": "1ro A", "turno": "noche"}
+
+// ❌ Error - duplicado en mismo turno
+{"nombre": "1ro A", "turno": "mañana"}  // Ya existe
+```
+
+### Ejemplo de Uso Completo
+
+```bash
+# 1. Crear materias
+curl -X POST http://localhost:8000/api/materias/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {tu_token}" \
+  -d '{"nombre": "Matemáticas", "descripcion": "Álgebra y geometría"}'
+
+# 2. Crear curso
+curl -X POST http://localhost:8000/api/cursos/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {tu_token}" \
+  -d '{"nombre": "5to A", "turno": "mañana"}'
+
+# 3. Asignar materia con docente y horarios en una sola operación
+curl -X PATCH http://localhost:8000/api/cursos/asignar-materias/1/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {tu_token}" \
+  -d '{
+    "asignaciones": [
+      {
+        "materia_id": 1, 
+        "docente_id": 2,
+        "horarios": [
+          {
+            "dia_semana": "Lunes",
+            "hora_inicio": "08:00",
+            "hora_fin": "09:30"
+          },
+          {
+            "dia_semana": "Miércoles",
+            "hora_inicio": "10:00",
+            "hora_fin": "11:30"
+          }
+        ]
+      }
+    ]
+  }'
+
+# 4. Agregar horario adicional (opcional)
+curl -X POST http://localhost:8000/api/horarios/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {tu_token}" \
+  -d '{"materia_curso": 1, "dia_semana": "Viernes", "hora_inicio": "08:00", "hora_fin": "09:30"}'
+```
+
+---
+
 ## Endpoints principales
 
 ### Usuarios generales
@@ -197,4 +538,4 @@ Donde `5` es el ID del padre/tutor (no el ID del usuario).
 ---
 
 Para más detalles, revisa la documentación Swagger en:
-- [http://localhost:8000/swagger/](http://localhost:8000/swagger/) 
+- [http://localhost:8000/swagger/](http://localhost:8000/swagger/)
