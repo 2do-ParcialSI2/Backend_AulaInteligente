@@ -31,44 +31,44 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return user
 
 
-class EstudianteSerializer(serializers.ModelSerializer):
+class EstudianteCreateSerializer(serializers.ModelSerializer):
+    """Serializer para CREAR estudiantes - solo campos necesarios"""
     email = serializers.EmailField(write_only=True, required=False)
     first_name = serializers.CharField(write_only=True, required=False)
     last_name = serializers.CharField(write_only=True, required=False)
     genero = serializers.CharField(write_only=True, required=False)
     activo = serializers.BooleanField(write_only=True, required=False)
-    roles = serializers.SerializerMethodField(read_only=True)
     password = serializers.CharField(write_only=True, required=True)
     direccion = serializers.CharField(required=True)
     fecha_nacimiento = serializers.DateField(required=True)
     padre_tutor_id = serializers.IntegerField(write_only=True, required=False)
-    curso = CursoSerializer(read_only=True)
+    curso_id = serializers.IntegerField(
+        write_only=True, 
+        required=False,
+        allow_null=True,
+        help_text="ID del curso al que asignar el estudiante"
+    )
 
     class Meta:
         model = Estudiante
         fields = [
-            "id",
             "email",
             "first_name",
             "last_name",
             "genero",
             "activo",
-            "roles",
             "password",
             "direccion",
             "fecha_nacimiento",
             "padre_tutor_id",
-            "curso",
+            "curso_id",
         ]
-        read_only_fields = ["id", "roles"]
-
-    def get_roles(self, obj):
-        return [rol.nombre for rol in obj.usuario.roles.all()]
 
     def create(self, validated_data):
         direccion = validated_data.pop("direccion")
         fecha_nacimiento = validated_data.pop("fecha_nacimiento")
         padre_tutor_id = validated_data.pop("padre_tutor_id", None)
+        curso_id = validated_data.pop("curso_id", None)
         password = validated_data.pop("password")
 
         user = Usuario(**validated_data)
@@ -82,6 +82,17 @@ class EstudianteSerializer(serializers.ModelSerializer):
             usuario=user, direccion=direccion, fecha_nacimiento=fecha_nacimiento
         )
 
+        # Asignar curso si se proporcionó
+        if curso_id:
+            from cursos.models import Curso
+            try:
+                curso = Curso.objects.get(id=curso_id)
+                estudiante.curso = curso
+                estudiante.save()
+            except Curso.DoesNotExist:
+                raise serializers.ValidationError(f"El curso con ID {curso_id} no existe")
+
+        # Asignar padre/tutor si se proporcionó
         if padre_tutor_id:
             try:
                 padre_tutor = PadreTutor.objects.get(id=padre_tutor_id)
@@ -90,39 +101,106 @@ class EstudianteSerializer(serializers.ModelSerializer):
             except PadreTutor.DoesNotExist:
                 pass
 
-        return user
+        return estudiante
 
-    def to_representation(self, instance):
-        if isinstance(instance, Usuario):
-            try:
-                estudiante = Estudiante.objects.get(usuario=instance)
-            except Estudiante.DoesNotExist:
-                return super().to_representation(instance)
-        else:
-            estudiante = instance
-        data = super().to_representation(estudiante)
-        data["email"] = estudiante.usuario.email
-        data["first_name"] = estudiante.usuario.first_name
-        data["last_name"] = estudiante.usuario.last_name
-        data["genero"] = estudiante.usuario.genero
-        data["activo"] = estudiante.usuario.activo
-        data["roles"] = [rol.nombre for rol in estudiante.usuario.roles.all()]
-        data["direccion"] = estudiante.direccion
-        data["fecha_nacimiento"] = estudiante.fecha_nacimiento
-        if estudiante.padre_tutor:
-            data["padre_tutor"] = {
-                "id": estudiante.padre_tutor.id,
-                "nombre": f"{estudiante.padre_tutor.usuario.first_name} {estudiante.padre_tutor.usuario.last_name}",
-                "parentesco": estudiante.padre_tutor.parentesco,
+
+class EstudianteUpdateSerializer(serializers.ModelSerializer):
+    """Serializer para ACTUALIZAR estudiantes - campos permitidos para editar"""
+    padre_tutor_id = serializers.IntegerField(
+        write_only=True, 
+        required=False, 
+        allow_null=True,
+        help_text="ID del padre/tutor a asignar"
+    )
+    curso_id = serializers.IntegerField(
+        write_only=True, 
+        required=False, 
+        allow_null=True,
+        help_text="ID del curso al que asignar el estudiante"
+    )
+
+    class Meta:
+        model = Estudiante
+        fields = [
+            "direccion",
+            "fecha_nacimiento", 
+            "padre_tutor_id",
+            "curso_id"
+        ]
+
+    def update(self, instance, validated_data):
+        # Actualizar campos directos del estudiante
+        instance.direccion = validated_data.get('direccion', instance.direccion)
+        instance.fecha_nacimiento = validated_data.get('fecha_nacimiento', instance.fecha_nacimiento)
+        
+        # Manejar padre_tutor_id
+        padre_tutor_id = validated_data.get('padre_tutor_id')
+        if padre_tutor_id is not None:
+            if padre_tutor_id == 0 or padre_tutor_id == '':
+                instance.padre_tutor = None
+            else:
+                try:
+                    padre_tutor = PadreTutor.objects.get(id=padre_tutor_id)
+                    instance.padre_tutor = padre_tutor
+                except PadreTutor.DoesNotExist:
+                    raise serializers.ValidationError(f"El padre/tutor con ID {padre_tutor_id} no existe")
+        
+        # Manejar curso_id
+        curso_id = validated_data.get('curso_id')
+        if curso_id is not None:
+            if curso_id == 0 or curso_id == '':
+                instance.curso = None
+            else:
+                from cursos.models import Curso
+                try:
+                    curso = Curso.objects.get(id=curso_id)
+                    instance.curso = curso
+                except Curso.DoesNotExist:
+                    raise serializers.ValidationError(f"El curso con ID {curso_id} no existe")
+        
+        instance.save()
+        return instance
+
+
+class EstudianteSerializer(serializers.ModelSerializer):
+    """Serializer para LEER estudiantes - incluye todos los datos"""
+    email = serializers.EmailField(source='usuario.email', read_only=True)
+    first_name = serializers.CharField(source='usuario.first_name', read_only=True)
+    last_name = serializers.CharField(source='usuario.last_name', read_only=True)
+    genero = serializers.CharField(source='usuario.genero', read_only=True)
+    activo = serializers.BooleanField(source='usuario.activo', read_only=True)
+    roles = serializers.SerializerMethodField(read_only=True)
+    curso = CursoSerializer(read_only=True)
+    padre_tutor = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Estudiante
+        fields = [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "genero",
+            "activo",
+            "roles",
+            "direccion",
+            "fecha_nacimiento",
+            "padre_tutor",
+            "curso",
+        ]
+        read_only_fields = ["id"]
+
+    def get_roles(self, obj):
+        return [rol.nombre for rol in obj.usuario.roles.all()]
+
+    def get_padre_tutor(self, obj):
+        if obj.padre_tutor:
+            return {
+                "id": obj.padre_tutor.id,
+                "nombre": f"{obj.padre_tutor.usuario.first_name} {obj.padre_tutor.usuario.last_name}",
+                "parentesco": obj.padre_tutor.parentesco,
             }
-        else:
-            data["padre_tutor"] = None
-
-        if estudiante.curso:
-            data["curso"] = CursoSerializer(estudiante.curso).data
-        else:
-            data["curso"] = None
-        return data
+        return None
 
 
 # para no anidar toda la estructura del usuario y consultar que estudiantes estan asociados a un curso
@@ -130,10 +208,20 @@ class EstudianteSimpleSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source="usuario.first_name")
     last_name = serializers.CharField(source="usuario.last_name")
     genero = serializers.CharField(source="usuario.genero")
+    curso = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Estudiante
-        fields = ["id", "first_name", "last_name", "genero", "fecha_nacimiento"]
+        fields = ["id", "first_name", "last_name", "genero", "fecha_nacimiento", "curso"]
+
+    def get_curso(self, obj):
+        if obj.curso:
+            return {
+                "id": obj.curso.id,
+                "nombre": obj.curso.nombre,
+                "turno": obj.curso.turno
+            }
+        return None
 
 
 class DocenteSerializer(serializers.ModelSerializer):
@@ -231,7 +319,8 @@ class PadreTutorSerializer(serializers.ModelSerializer):
         return [rol.nombre for rol in obj.usuario.roles.all()]
 
     def get_estudiantes(self, obj):
-        return [est.id for est in obj.estudiantes.all()]
+        estudiantes = obj.estudiantes.all()
+        return EstudianteSimpleSerializer(estudiantes, many=True).data
 
     def create(self, validated_data):
         parentesco = validated_data.pop("parentesco")

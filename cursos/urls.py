@@ -8,8 +8,9 @@ from .views import (
 )
 from cursos.viewsAsignacion import CursoMateriaAsignacionViewSet
 
-# Registramos solo los viewsets adicionales
+# Registramos todos los viewsets
 router = DefaultRouter()
+router.register(r"", CursoViewSet, basename="cursos")  # Expone todas las acciones CRUD
 router.register(
     r"cursos-con-estudiantes",
     CursoConEstudiantesViewSet,
@@ -21,22 +22,14 @@ router.register(
     basename="asignar-materias",
 )
 
-# Acciones manuales de CursoViewSet
-curso_list = CursoViewSet.as_view({"get": "list"})
-curso_detail = CursoViewSet.as_view({"get": "retrieve"})
-
 urlpatterns = [
-    # Rutas personalizadas
-    path("", curso_list, name="curso-lista"),
-    path("<int:pk>/", curso_detail, name="curso-detalle"),
+    # Rutas personalizadas que no están en el router
     path("turnos/", TurnosChoicesView.as_view(), name="turnos"),
     path(
         "con-materias/<int:id>",
         CursoConMateriasView.as_view(),
         name="curso-con-materias",
     ),
-    # Rutas adicionales con include(router.urls)
-    path(
-        "", include(router.urls)
-    ),  # Mantiene las otras rutas de los viewsets registrados
+    # Rutas del router (incluye todas las acciones CRUD para cursos)
+    path("", include(router.urls)),
 ]

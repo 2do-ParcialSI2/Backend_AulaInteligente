@@ -1,5 +1,4 @@
 from django.db import models
-from materias.models import MateriaCurso
 
 
 class Horario(models.Model):
@@ -12,12 +11,21 @@ class Horario(models.Model):
         ("Viernes", "Viernes"),
         ("Sábado", "Sábado"),
     ]
-    materia_curso = models.ForeignKey(
-        MateriaCurso, on_delete=models.CASCADE, related_name="horarios"
+    
+    nombre = models.CharField(
+        max_length=100, 
+        default="Horario sin nombre",
+        help_text="Ej: 'Primera hora mañana', 'Bloque tarde'"
     )
     dia_semana = models.CharField(max_length=10, choices=DIAS_SEMANA)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
 
+    class Meta:
+        unique_together = ("dia_semana", "hora_inicio", "hora_fin")  # Evita horarios duplicados
+        verbose_name = "Horario"
+        verbose_name_plural = "Horarios"
+        ordering = ["dia_semana", "hora_inicio"]
+
     def __str__(self):
-        return f"{self.materia_curso} - {self.dia_semana} {self.hora_inicio.strftime('%H:%M')} a {self.hora_fin.strftime('%H:%M')}"
+        return f"{self.nombre} - {self.dia_semana} {self.hora_inicio.strftime('%H:%M')} a {self.hora_fin.strftime('%H:%M')}"

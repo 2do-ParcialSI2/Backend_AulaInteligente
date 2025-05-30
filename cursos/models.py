@@ -7,9 +7,14 @@ class Curso(models.Model):
         ("tarde", "Tarde"),
         ("noche", "Noche"),
     ]
-    nombre = models.CharField(max_length=20, unique=True)  # Ej: "5to A", "3ro B"
+    nombre = models.CharField(max_length=20)  # Ej: "5to A", "3ro B"
     turno = models.CharField(max_length=10, choices=TURNO_CHOICES, default="mañana")
     materias = models.ManyToManyField("materias.Materia", through="materias.MateriaCurso", related_name="cursos")
+
+    class Meta:
+        unique_together = ("nombre", "turno")  # Permite mismo nombre en diferentes turnos
+        verbose_name = "Curso"
+        verbose_name_plural = "Cursos"
 
     def __str__(self):
         return f"{self.nombre} ({self.turno})"
