@@ -220,97 +220,81 @@ Content-Type: application/json
     {
       "materia_id": 1,
       "docente_id": 2,
-      "horarios": [
-        {
-          "dia_semana": "Lunes",
-          "hora_inicio": "08:00",
-          "hora_fin": "09:30"
-        },
-        {
-          "dia_semana": "Miércoles",
-          "hora_inicio": "10:00",
-          "hora_fin": "11:30"
-        }
-      ]
-    },
-    {
-      "materia_id": 3,
-      "docente_id": 4,
-      "horarios": [
-        {
-          "dia_semana": "Martes",
-          "hora_inicio": "14:00",
-          "hora_fin": "15:30"
-        }
-      ]
+      "horarios_ids": [1, 2]
     }
   ]
 }
 ```
 
-#### **Paso 5: Ver Asignaciones de un Curso**
+**Nota**: Este endpoint **AGREGA** nuevas asignaciones sin eliminar las existentes.
+
+#### **Paso 4b: Agregar Más Materias al Mismo Curso**
+```http
+PATCH /api/cursos/asignar-materias/{curso_id}/
+Content-Type: application/json
+
+{
+  "asignaciones": [
+    {
+      "materia_id": 3,
+      "docente_id": 4,
+      "horarios_ids": [3, 4]
+    }
+  ]
+}
+```
+
+#### **Paso 4c: Ver Asignaciones del Curso**
 ```http
 GET /api/cursos/asignar-materias/{curso_id}/
+```
+
+#### **Paso 4d: Eliminar Asignación Específica**
+```http
+DELETE /api/cursos/{curso_id}/eliminar-materia/{materia_id}/
+```
+
+#### **Paso 5: Crear Estudiante y Asignar a Curso (SIMPLIFICADO)**
+```http
+POST /api/estudiantes/
+Content-Type: application/json
+
+{
+  "email": "estudiante@example.com",
+  "first_name": "Sofia",
+  "last_name": "Melgar",
+  "genero": "F",
+  "password": "some123",
+  "direccion": "av. la florida",
+  "fecha_nacimiento": "2011-05-29",
+  "padre_tutor_id": 5,
+  "curso_id": 1
+}
+```
+
+**Nota**: Ya **NO** requiere el objeto completo del curso, solo el `curso_id`.
+
+#### **Paso 6: Ver Horarios de un Docente**
+```http
+GET /api/docentes/{docente_id}/horarios/
 ```
 
 **Respuesta:**
 ```json
 {
-  "id": 1,
-  "nombre": "5to A",
-  "turno": "mañana",
-  "materias_docentes": [
+  "docente": "Juan Pérez", 
+  "total_horarios": 2,
+  "horarios": [
     {
-      "id": 1,
-      "materia_id": 1,
-      "materia_nombre": "Matemáticas",
-      "docente_id": 2,
-      "docente_nombre": "Juan Pérez",
-      "horarios": [
-        {
-          "id": 1,
-          "dia_semana": "Lunes",
-          "hora_inicio": "08:00:00",
-          "hora_fin": "09:30:00"
-        },
-        {
-          "id": 2,
-          "dia_semana": "Miércoles",
-          "hora_inicio": "10:00:00",
-          "hora_fin": "11:30:00"
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "materia_id": 3,
-      "materia_nombre": "Historia",
-      "docente_id": 4,
-      "docente_nombre": "María González",
-      "horarios": [
-        {
-          "id": 3,
-          "dia_semana": "Martes",
-          "hora_inicio": "14:00:00",
-          "hora_fin": "15:30:00"
-        }
-      ]
+      "horario_id": 1,
+      "nombre": "Matemáticas Básica",
+      "dia_semana": "Lunes",
+      "hora_inicio": "08:00:00",
+      "hora_fin": "09:30:00",
+      "materia": "Matemáticas",
+      "curso": "5to A - mañana"
     }
   ]
-}
-```
-
-#### **Paso 6: Agregar Más Horarios (Opcional)**
-Si solo quieres agregar horarios sin cambiar las asignaciones, puedes usar:
-```http
-POST /api/horarios/
-Content-Type: application/json
-
-{
-  "materia_curso": 1,
-  "dia_semana": "Viernes",
-  "hora_inicio": "08:00",
-  "hora_fin": "09:30"
 }
 ```
 

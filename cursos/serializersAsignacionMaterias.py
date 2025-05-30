@@ -121,6 +121,40 @@ class CursoMateriaAsignacionSerializer(serializers.ModelSerializer):
                             f"vs '{horario2['nombre']}' ({horario2['hora_inicio']}-{horario2['hora_fin']})"
                         )
 
+    def _validar_choques_docente_global(self, asignaciones_nuevas):
+        """Validar que el docente no tenga choques de horarios con sus otras asignaciones en cualquier curso"""
+        
+        for asignacion in asignaciones_nuevas:
+            docente = asignacion['docente_id']
+            horarios_nuevos = asignacion.get('horarios_ids', [])
+            
+            # Obtener TODOS los horarios actuales del docente en cualquier curso
+            horarios_docente_existentes = Horario.objects.filter(
+                materia_cursos__docente=docente
+            ).distinct()
+            
+            # Verificar cada horario nuevo contra los existentes del docente
+            for horario_nuevo in horarios_nuevos:
+                for horario_existente in horarios_docente_existentes:
+                    # Verificar si son el mismo día de la semana
+                    if horario_nuevo.dia_semana == horario_existente.dia_semana:
+                        # Verificar si hay solapamiento de horarios
+                        if (horario_nuevo.hora_inicio < horario_existente.hora_fin and 
+                            horario_nuevo.hora_fin > horario_existente.hora_inicio):
+                            
+                            # Obtener información de la materia y curso del horario existente
+                            materia_curso_existente = horario_existente.materia_cursos.filter(docente=docente).first()
+                            if materia_curso_existente:
+                                raise serializers.ValidationError(
+                                    f"CHOQUE DE DOCENTE: El docente {docente.usuario.first_name} {docente.usuario.last_name} "
+                                    f"ya tiene asignado el horario '{horario_existente.nombre}' "
+                                    f"({horario_existente.hora_inicio}-{horario_existente.hora_fin}) "
+                                    f"el {horario_existente.dia_semana} para la materia '{materia_curso_existente.materia.nombre}' "
+                                    f"en el curso '{materia_curso_existente.curso.nombre} - {materia_curso_existente.curso.turno}'. "
+                                    f"No puede ser asignado al horario '{horario_nuevo.nombre}' "
+                                    f"({horario_nuevo.hora_inicio}-{horario_nuevo.hora_fin}) al mismo tiempo."
+                                )
+
     @transaction.atomic
     def update(self, instance, validated_data):
         asignaciones = validated_data.pop("asignaciones", [])
@@ -128,29 +162,31 @@ class CursoMateriaAsignacionSerializer(serializers.ModelSerializer):
         # Validar choques de horarios globales antes de hacer cambios
         self._validar_choques_horarios_globales(instance, asignaciones)
         
-        # Obtener asignaciones actuales
-        asignaciones_actuales = MateriaCurso.objects.filter(curso=instance)
-        materias_actuales = {mc.materia.id: mc for mc in asignaciones_actuales}
+        # Validar choques de horarios del docente con sus otras asignaciones en cualquier curso
+        self._validar_choques_docente_global(asignaciones)
         
-        # Materias que van a estar en la nueva configuración
-        materias_nuevas = {item['materia_id'].id: item for item in asignaciones}
+        # Validar que no se intente agregar materias que ya existen
+        materias_existentes = MateriaCurso.objects.filter(curso=instance).values_list('materia_id', flat=True)
+        for asignacion in asignaciones:
+            materia_id = asignacion['materia_id'].id
+            if materia_id in materias_existentes:
+                materia_nombre = asignacion['materia_id'].nombre
+                raise serializers.ValidationError(
+                    f"La materia '{materia_nombre}' ya está asignada a este curso. "
+                    f"Use PUT para actualizar o DELETE para eliminar."
+                )
         
-        # Eliminar asignaciones que ya no están en la nueva configuración
-        for materia_id, materia_curso in materias_actuales.items():
-            if materia_id not in materias_nuevas:
-                materia_curso.delete()
-        
-        # Crear o actualizar asignaciones
+        # Crear nuevas asignaciones (solo agregar, no eliminar existentes)
         for asignacion in asignaciones:
             materia = asignacion['materia_id']
             docente = asignacion['docente_id']
             horarios_ids = asignacion.get('horarios_ids', [])
             
-            # Crear o actualizar MateriaCurso
-            materia_curso, created = MateriaCurso.objects.update_or_create(
+            # Crear nueva MateriaCurso
+            materia_curso = MateriaCurso.objects.create(
                 curso=instance,
                 materia=materia,
-                defaults={'docente': docente}
+                docente=docente
             )
             
             # Asignar horarios usando M2M
