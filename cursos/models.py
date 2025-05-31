@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+from datetime import date
 
 
 class Curso(models.Model):
@@ -21,10 +23,25 @@ class Curso(models.Model):
 
 
 class Trimestre(models.Model):
-    nombre = models.CharField(max_length=50)
+    nombre = models.CharField(max_length=50)  # Ej: "Primer Trimestre 2025", "Segundo Trimestre 2025"
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
-    curso = models.ForeignKey('cursos.Curso', on_delete=models.CASCADE, related_name='trimestres')
+
+    class Meta:
+        ordering = ['fecha_inicio']
+        verbose_name = "Trimestre"
+        verbose_name_plural = "Trimestres"
 
     def __str__(self):
-        return f"{self.nombre} - {self.curso.nombre}"
+        return f"{self.nombre}"
+    
+    @property
+    def duracion_dias(self):
+        """Calcular la duración del trimestre en días"""
+        return (self.fecha_fin - self.fecha_inicio).days + 1
+    
+    def clean(self):
+        """Validación a nivel de modelo"""
+        from django.core.exceptions import ValidationError
+        if self.fecha_inicio >= self.fecha_fin:
+            raise ValidationError("La fecha de inicio debe ser anterior a la fecha de fin")

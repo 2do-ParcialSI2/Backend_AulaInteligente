@@ -4,10 +4,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework import status
-from cursos.models import Curso
+from cursos.models import Curso, Trimestre
 from cursos.serializers import (
     CursoSerializer,
     CursoConEstudiantesSerializer,
+    TrimestreSerializer,
+    TrimestreCreateSerializer,
 )
 from cursos.serializersMaterias import CursoConMateriasSerializer
 from materias.models import MateriaCurso
@@ -54,3 +56,27 @@ class TurnosChoicesView(APIView):
             {"value": turno[0], "label": turno[1]} for turno in Curso.TURNO_CHOICES
         ]
         return Response(turnos)
+
+
+class TrimestreViewSet(viewsets.ModelViewSet):
+    """ViewSet para gestionar trimestres con CRUD completo"""
+    queryset = Trimestre.objects.all()
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return TrimestreCreateSerializer
+        return TrimestreSerializer
+    
+    def create(self, request, *args, **kwargs):
+        """Crear un nuevo trimestre"""
+        create_serializer = TrimestreCreateSerializer(data=request.data)
+        create_serializer.is_valid(raise_exception=True)
+        trimestre_creado = create_serializer.save()
+        
+        # Usar el serializer de lectura para la respuesta
+        response_serializer = TrimestreSerializer(trimestre_creado)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+    
+    def get_queryset(self):
+        """Ordenar trimestres por fecha de inicio"""
+        return Trimestre.objects.all().order_by('fecha_inicio')
