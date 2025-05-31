@@ -12,6 +12,7 @@ from .serializers import (
 )
 from matricula.models import Matricula
 from datetime import date
+import requests
 
 # Create your views here.
 
@@ -75,6 +76,222 @@ class SeguimientoViewSet(viewsets.ModelViewSet):
         seguimientos = Seguimiento.objects.filter(estudiante_id=estudiante_id)
         serializer = SeguimientoDetalladoSerializer(seguimientos, many=True)
         return Response(serializer.data)
+    
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('estudiante_id', openapi.IN_PATH, description="ID del estudiante", type=openapi.TYPE_INTEGER, required=True),
+            openapi.Parameter('materia_curso_id', openapi.IN_PATH, description="ID de la materia-curso", type=openapi.TYPE_INTEGER, required=True),
+        ],
+        responses={
+            200: openapi.Response(
+                description="Predicción exitosa",
+                examples={
+                    "application/json": {
+                        "success": True,
+                        "estudiante_id": 123,
+                        "materia_curso_id": 456,
+                        "prediccion": {
+                            "nota_estimada": 84.7,
+                            "clasificacion": "medio",
+                            "nivel_confianza": "alto",
+                            "confianza_valor": 3.2,
+                            "mensaje": "Buen rendimiento. Se estima una nota de 84.7 (rendimiento medio) con alta confianza."
+                        },
+                        "datos_utilizados": {
+                            "prom_tareas_t1": 85.0,
+                            "prom_examenes_t1": 78.0,
+                            "prom_part_t1": 92.0,
+                            "asistencia_t1": 95.0,
+                            "prom_tareas_t2": 87.0,
+                            "prom_examenes_t2": 82.0,
+                            "prom_part_t2": 88.0,
+                            "asistencia_t2": 93.0
+                        },
+                        "trimestres_utilizados": ["1er Trimestre", "2do Trimestre"]
+                    }
+                }
+            ),
+            400: openapi.Response(description="Error en los datos de entrada"),
+            404: openapi.Response(description="Estudiante o materia-curso no encontrado"),
+            503: openapi.Response(description="Error al conectar con el microservicio de predicción")
+        }
+    )
+    @action(detail=False, methods=['post'], url_path='predecir-nota/(?P<estudiante_id>[^/.]+)/(?P<materia_curso_id>[^/.]+)')
+    def predecir_nota(self, request, estudiante_id=None, materia_curso_id=None):
+        """
+        Predecir la nota del tercer trimestre usando Machine Learning
+        
+        Este endpoint:
+        1. Obtiene los datos de seguimiento del estudiante para los trimestres 1 y 2
+        2. Calcula los promedios necesarios para el modelo ML
+        3. Llama al microservicio de predicción
+        4. Retorna la predicción formateada
+        """
+        try:
+            # Validar que existan los IDs
+            if not estudiante_id or not materia_curso_id:
+                return Response({
+                    'success': False,
+                    'error': 'Se requieren estudiante_id y materia_curso_id'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Obtener y validar datos para predicción
+            datos_prediccion = self._obtener_datos_para_prediccion(estudiante_id, materia_curso_id)
+            
+            if 'error' in datos_prediccion:
+                return Response({
+                    'success': False,
+                    'error': datos_prediccion['error']
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Llamar al microservicio de predicción
+            try:
+                ml_response = requests.post(
+                    'http://localhost:8000/api/v1/predecir/',
+                    json=datos_prediccion['datos_ml'],
+                    timeout=10
+                )
+                
+                if ml_response.status_code == 200:
+                    prediccion = ml_response.json()
+                    
+                    return Response({
+                        'success': True,
+                        'estudiante_id': int(estudiante_id),
+                        'materia_curso_id': int(materia_curso_id),
+                        'prediccion': prediccion,
+                        'datos_utilizados': datos_prediccion['datos_ml'],
+                        'trimestres_utilizados': datos_prediccion['trimestres_nombres']
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        'success': False,
+                        'error': f'Error del microservicio ML: {ml_response.text}'
+                    }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                    
+            except requests.exceptions.ConnectionError:
+                return Response({
+                    'success': False,
+                    'error': 'No se puede conectar al microservicio de predicción. Verifique que esté ejecutándose en http://localhost:8000'
+                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            except requests.exceptions.Timeout:
+                return Response({
+                    'success': False,
+                    'error': 'Timeout al conectar con el microservicio de predicción'
+                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            except Exception as e:
+                return Response({
+                    'success': False,
+                    'error': f'Error inesperado al llamar al microservicio: {str(e)}'
+                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': f'Error interno del servidor: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def _obtener_datos_para_prediccion(self, estudiante_id, materia_curso_id):
+        """
+        Método auxiliar para obtener y formatear datos de seguimiento para el modelo ML
+        """
+        try:
+            from usuarios.models import Estudiante
+            from materias.models import MateriaCurso
+            from cursos.models import Trimestre
+            
+            # Validar que existen el estudiante y materia_curso
+            try:
+                estudiante = Estudiante.objects.get(id=estudiante_id)
+                materia_curso = MateriaCurso.objects.get(id=materia_curso_id)
+            except Estudiante.DoesNotExist:
+                return {'error': f'No se encontró el estudiante con ID {estudiante_id}'}
+            except MateriaCurso.DoesNotExist:
+                return {'error': f'No se encontró la materia-curso con ID {materia_curso_id}'}
+            
+            # Obtener trimestres ordenados por fecha de inicio
+            trimestres = Trimestre.objects.all().order_by('fecha_inicio')
+            
+            if trimestres.count() < 2:
+                return {'error': 'Se necesitan al menos 2 trimestres registrados para hacer predicciones'}
+            
+            trimestre_1 = trimestres[0]  # Primer trimestre
+            trimestre_2 = trimestres[1]  # Segundo trimestre
+            
+            # Obtener seguimientos para ambos trimestres
+            try:
+                seguimiento_t1 = Seguimiento.objects.get(
+                    estudiante=estudiante,
+                    materia_curso=materia_curso,
+                    trimestre=trimestre_1
+                )
+            except Seguimiento.DoesNotExist:
+                return {'error': f'No se encontró seguimiento del estudiante en {trimestre_1.nombre}'}
+            
+            try:
+                seguimiento_t2 = Seguimiento.objects.get(
+                    estudiante=estudiante,
+                    materia_curso=materia_curso,
+                    trimestre=trimestre_2
+                )
+            except Seguimiento.DoesNotExist:
+                return {'error': f'No se encontró seguimiento del estudiante en {trimestre_2.nombre}'}
+            
+            # Calcular promedios para trimestre 1
+            datos_t1 = self._calcular_promedios_seguimiento(seguimiento_t1)
+            
+            # Calcular promedios para trimestre 2
+            datos_t2 = self._calcular_promedios_seguimiento(seguimiento_t2)
+            
+            # Formatear datos para el modelo ML
+            datos_ml = {
+                'prom_tareas_t1': datos_t1['prom_tareas'],
+                'prom_examenes_t1': datos_t1['prom_examenes'],
+                'prom_part_t1': datos_t1['prom_participaciones'],
+                'asistencia_t1': datos_t1['porcentaje_asistencia'],
+                'prom_tareas_t2': datos_t2['prom_tareas'],
+                'prom_examenes_t2': datos_t2['prom_examenes'],
+                'prom_part_t2': datos_t2['prom_participaciones'],
+                'asistencia_t2': datos_t2['porcentaje_asistencia']
+            }
+            
+            return {
+                'datos_ml': datos_ml,
+                'trimestres_nombres': [trimestre_1.nombre, trimestre_2.nombre]
+            }
+            
+        except Exception as e:
+            return {'error': f'Error al procesar datos: {str(e)}'}
+    
+    def _calcular_promedios_seguimiento(self, seguimiento):
+        """
+        Calcular promedios específicos de un seguimiento (similar al método del modelo pero retornando datos separados)
+        """
+        # Promedio de tareas
+        tareas = seguimiento.tareas.all()
+        prom_tareas = sum(t.nota_tarea for t in tareas) / len(tareas) if tareas else 0
+
+        # Promedio de participaciones
+        participaciones = seguimiento.participaciones.all()
+        prom_participaciones = sum(p.nota_participacion for p in participaciones) / len(participaciones) if participaciones else 0
+
+        # Promedio de exámenes
+        examenes = seguimiento.examenes.all()
+        prom_examenes = sum(e.nota_examen for e in examenes) / len(examenes) if examenes else 0
+
+        # Porcentaje de asistencia
+        asistencias = seguimiento.asistencias.all()
+        porcentaje_asistencia = (
+            sum(1 for a in asistencias if a.asistencia) / len(asistencias) * 100
+            if asistencias else 0
+        )
+        
+        return {
+            'prom_tareas': round(prom_tareas, 2),
+            'prom_participaciones': round(prom_participaciones, 2),
+            'prom_examenes': round(prom_examenes, 2),
+            'porcentaje_asistencia': round(porcentaje_asistencia, 2)
+        }
 
 
 class AsistenciaViewSet(viewsets.ModelViewSet):
