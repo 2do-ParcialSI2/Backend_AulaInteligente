@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Curso
+from .models import Curso, Trimestre
 
 
 class CursoSerializer(serializers.ModelSerializer):
@@ -29,3 +29,35 @@ class CursoConEstudiantesSerializer(serializers.ModelSerializer):
         ).data
 
         return rep
+
+
+class TrimestreSerializer(serializers.ModelSerializer):
+    duracion_dias = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = Trimestre
+        fields = ['id', 'nombre', 'fecha_inicio', 'fecha_fin', 'duracion_dias']
+        
+    def validate(self, data):
+        """Validar que la fecha de inicio sea anterior a la fecha de fin"""
+        if data['fecha_inicio'] >= data['fecha_fin']:
+            raise serializers.ValidationError(
+                "La fecha de inicio debe ser anterior a la fecha de fin"
+            )
+        return data
+
+
+class TrimestreCreateSerializer(serializers.ModelSerializer):
+    """Serializer simplificado para crear trimestres"""
+    
+    class Meta:
+        model = Trimestre
+        fields = ['nombre', 'fecha_inicio', 'fecha_fin']
+        
+    def validate(self, data):
+        """Validar que la fecha de inicio sea anterior a la fecha de fin"""
+        if data['fecha_inicio'] >= data['fecha_fin']:
+            raise serializers.ValidationError(
+                "La fecha de inicio debe ser anterior a la fecha de fin"
+            )
+        return data

@@ -13,6 +13,7 @@ class HorarioSerializer(serializers.ModelSerializer):
         """
         hora_inicio = data['hora_inicio']
         hora_fin = data['hora_fin']
+        
 
         # Validar que hora_inicio sea menor que hora_fin
         if hora_inicio >= hora_fin:

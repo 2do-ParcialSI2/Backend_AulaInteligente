@@ -523,3 +523,32 @@ Donde `5` es el ID del padre/tutor (no el ID del usuario).
 
 Para más detalles, revisa la documentación Swagger en:
 - [http://localhost:8000/swagger/](http://localhost:8000/swagger/)
+
+
+GET    /api/cursos/trimestres/           # Listar todos
+POST   /api/cursos/trimestres/           # Crear nuevo ✅
+GET    /api/cursos/trimestres/{id}/      # Obtener uno
+PUT    /api/cursos/trimestres/{id}/      # Actualizar completo
+PATCH  /api/cursos/trimestres/{id}/      # Actualizar parcial
+DELETE /api/cursos/trimestres/{id}/      # Eliminar
+
+# Acciones personalizadas
+GET    /api/cursos/trimestres/activo/            # Trimestre activo
+PATCH  /api/cursos/trimestres/{id}/activar/     # Activar trimestre
+
+POST /api/cursos/trimestres/
+{
+  "nombre": "1er Trimestre",
+  "fecha_inicio": "2025-02-03", 
+  "fecha_fin": "2025-05-05",
+  "activo": true
+}
+
+// Respuesta:
+{
+  "id": 1,
+  "nombre": "1er Trimestre",
+  "fecha_inicio": "2025-02-03",
+  "fecha_fin": "2025-05-05", 
+  "activo": true
+}

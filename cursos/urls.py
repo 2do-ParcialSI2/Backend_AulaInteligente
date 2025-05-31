@@ -5,12 +5,13 @@ from .views import (
     CursoConMateriasView,
     CursoConEstudiantesViewSet,
     TurnosChoicesView,
+    TrimestreViewSet,
 )
 from cursos.viewsAsignacion import CursoMateriaAsignacionViewSet
 
 # Registramos todos los viewsets
 router = DefaultRouter()
-router.register(r"", CursoViewSet, basename="cursos")  # Expone todas las acciones CRUD
+router.register(r"cursos", CursoViewSet, basename="cursos")  # Cambiar de "" a "cursos"
 router.register(
     r"cursos-con-estudiantes",
     CursoConEstudiantesViewSet,
@@ -21,6 +22,11 @@ router.register(
     CursoMateriaAsignacionViewSet,
     basename="asignar-materias",
 )
+router.register(
+    r"trimestres",
+    TrimestreViewSet,
+    basename="trimestres",
+)
 
 urlpatterns = [
     # Rutas personalizadas que no están en el router
@@ -30,6 +36,6 @@ urlpatterns = [
         CursoConMateriasView.as_view(),
         name="curso-con-materias",
     ),
-    # Rutas del router (incluye todas las acciones CRUD para cursos)
+    # Rutas del router (incluye todas las acciones CRUD)
     path("", include(router.urls)),
 ]
