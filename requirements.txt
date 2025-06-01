@@ -1,7 +1,29 @@
+# Django Framework
 Django==5.2.1
-djangorestframework==3.15.2
-djangorestframework-simplejwt==5.3.0
-drf-yasg==1.21.8
-psycopg2-binary==2.9.9
-python-dotenv==1.0.1
-requests==2.32.3 
+
+# Django REST Framework y autenticación JWT
+djangorestframework==3.16.0
+djangorestframework-simplejwt==5.5.0
+
+# Documentación API Swagger
+drf-yasg==1.21.10
+
+# CORS para Flutter/aplicaciones móviles
+django-cors-headers==4.7.0
+
+# PostgreSQL adapter
+psycopg2-binary==2.9.10
+
+# Variables de entorno
+python-dotenv==1.1.0
+
+# HTTP requests
+requests==2.32.3
+
+# Dependencias adicionales para drf-yasg
+PyYAML==6.0.2
+uritemplate==4.1.1
+inflection==0.5.1
+
+# JWT tokens
+PyJWT==2.9.0 
