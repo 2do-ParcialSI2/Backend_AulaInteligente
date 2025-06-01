@@ -29,7 +29,13 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG") == "True"
 
-ALLOWED_HOSTS = []
+# Configuración para Flutter y desarrollo móvil
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '192.168.0.6',  # IP de tu máquina para conexiones desde dispositivos móviles
+    '0.0.0.0',      # Para desarrollo
+]
 
 
 # Application definition
@@ -44,6 +50,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "drf_yasg",
+    "corsheaders",  # Django CORS headers para Flutter
     "usuarios",
     "cursos",
     "materias",
@@ -53,6 +60,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",  # CORS debe ir PRIMERO
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -167,3 +175,72 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# ===============================================
+# CONFIGURACIONES CORS PARA FLUTTER
+# ===============================================
+
+# Permitir CORS para todos los orígenes en desarrollo
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Solo en desarrollo
+
+# En producción, especificar orígenes exactos
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://192.168.0.6:8001",  # Puerto 8001 para tu backend
+    # Agregar aquí el dominio de producción cuando lo tengas
+]
+
+# Headers permitidos para Flutter
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Métodos HTTP permitidos
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Permitir cookies en requests CORS
+CORS_ALLOW_CREDENTIALS = True
+
+# Tiempo de cache para preflight requests
+CORS_PREFLIGHT_MAX_AGE = 3600
+
+# ===============================================
+# CONFIGURACIONES ADICIONALES PARA MÓVILES
+# ===============================================
+
+# Configuración de archivos estáticos para Flutter
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Configuración de archivos media (imágenes, documentos)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Headers de seguridad ajustados para desarrollo móvil
+if DEBUG:
+    # En desarrollo, más permisivo para facilitar pruebas
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+    SECURE_REFERRER_POLICY = None
+else:
+    # En producción, más estricto
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000  # 1 año
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
