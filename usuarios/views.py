@@ -68,18 +68,26 @@ class DocenteListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Docente.objects.all()
+        return Docente.objects.filter(usuario__activo=True)
 
 class DocenteDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = DocenteSerializer
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Docente.objects.all()
+    
+    def get_queryset(self):
+        return Docente.objects.filter(usuario__activo=True)
+
+    def perform_destroy(self, instance):
+        # Realizar eliminación lógica del usuario asociado
+        instance.usuario.activo = False
+        instance.usuario.save()
+        # No eliminamos el docente físicamente
 
 class EstudianteListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Estudiante.objects.all()
+        return Estudiante.objects.filter(usuario__activo=True)
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -98,7 +106,9 @@ class EstudianteListCreateView(generics.ListCreateAPIView):
 
 class EstudianteDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Estudiante.objects.all()
+    
+    def get_queryset(self):
+        return Estudiante.objects.filter(usuario__activo=True)
 
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
@@ -118,17 +128,31 @@ class EstudianteDetailView(generics.RetrieveUpdateDestroyAPIView):
         response_serializer = EstudianteSerializer(updated_instance)
         return Response(response_serializer.data)
 
+    def perform_destroy(self, instance):
+        # Realizar eliminación lógica del usuario asociado
+        instance.usuario.activo = False
+        instance.usuario.save()
+        # No eliminamos el estudiante físicamente
+
 class PadreTutorListCreateView(generics.ListCreateAPIView):
     serializer_class = PadreTutorSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return PadreTutor.objects.all()
+        return PadreTutor.objects.filter(usuario__activo=True)
 
 class PadreTutorDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = PadreTutorSerializer
     permission_classes = [permissions.IsAuthenticated]
-    queryset = PadreTutor.objects.all()
+    
+    def get_queryset(self):
+        return PadreTutor.objects.filter(usuario__activo=True)
+
+    def perform_destroy(self, instance):
+        # Realizar eliminación lógica del usuario asociado
+        instance.usuario.activo = False
+        instance.usuario.save()
+        # No eliminamos el padre/tutor físicamente
 
 class CrearAdminView(APIView):
     permission_classes = []  # Sin autenticación

@@ -5,6 +5,8 @@ from cursos.serializers import CursoSerializer
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
+    roles = serializers.SerializerMethodField()
+
     class Meta:
         model = Usuario
         fields = [
@@ -30,6 +32,15 @@ class UsuarioSerializer(serializers.ModelSerializer):
             user.roles.set(roles)
         return user
 
+    def get_roles(self, obj):
+        return [
+            {
+                "id": rol.id,
+                "nombre": rol.nombre,
+                "permisos": [permiso.nombre for permiso in rol.permisos.all()]
+            }
+            for rol in obj.roles.all()
+        ]
 
 class EstudianteCreateSerializer(serializers.ModelSerializer):
     """Serializer para CREAR estudiantes - solo campos necesarios"""
