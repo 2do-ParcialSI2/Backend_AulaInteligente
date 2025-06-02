@@ -9,5 +9,9 @@ class MateriaListCreateView(generics.ListCreateAPIView):
 
 
 class MateriaRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Materia.objects.all()
+    queryset = Materia.objects.all()  # No filtramos por activo para mantener historial
     serializer_class = MateriaSerializer
+
+    def perform_destroy(self, instance):
+        instance.activo = False
+        instance.save()

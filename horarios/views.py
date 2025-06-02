@@ -9,8 +9,12 @@ from unidecode import unidecode
 
 
 class HorarioViewSet(viewsets.ModelViewSet):
-    queryset = Horario.objects.all()
+    queryset = Horario.objects.all()  # No filtramos por activo para mantener historial
     serializer_class = HorarioSerializer
+
+    def perform_destroy(self, instance):
+        instance.activo = False
+        instance.save()
 
 
 # unidecode(dia) quita acentos ("Miércoles" → "Miercoles").
