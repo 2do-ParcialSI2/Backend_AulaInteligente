@@ -20,6 +20,7 @@ class Horario(models.Model):
     dia_semana = models.CharField(max_length=10, choices=DIAS_SEMANA)
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
+    activo = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("dia_semana", "hora_inicio", "hora_fin")  # Evita horarios duplicados

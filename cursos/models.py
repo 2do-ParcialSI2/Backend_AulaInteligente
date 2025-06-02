@@ -12,6 +12,7 @@ class Curso(models.Model):
     nombre = models.CharField(max_length=20)  # Ej: "5to A", "3ro B"
     turno = models.CharField(max_length=10, choices=TURNO_CHOICES, default="mañana")
     materias = models.ManyToManyField("materias.Materia", through="materias.MateriaCurso", related_name="cursos")
+    activo = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("nombre", "turno")  # Permite mismo nombre en diferentes turnos
