@@ -4,6 +4,13 @@ from dateutil.relativedelta import relativedelta
 
 # Create your models here.
 
+class MetodoPago(models.Model):
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField()
+
+    def __str__(self):
+        return self.nombre
+
 class TipoPago(models.Model):
     OPCIONES_PAGO = [
         ('mensual', 'Mensual'),
@@ -19,6 +26,7 @@ class TipoPago(models.Model):
 class Matricula(models.Model):
     estudiante = models.ForeignKey('usuarios.Estudiante', on_delete=models.CASCADE)
     tipo_pago = models.ForeignKey('matricula.TipoPago', on_delete=models.SET_NULL, null=True)
+    met_pago = models.ForeignKey('matricula.MetodoPago', on_delete=models.SET_NULL, null=True)
     fecha = models.DateField()
     monto = models.FloatField()
     descuento = models.FloatField(default=0)
